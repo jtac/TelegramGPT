@@ -15,3 +15,17 @@ openai.api_base = <your azure endpoint URL>
 You can find your API keys here as well, just use Key 1, Key 2 works as well but is meant as a reserve if you need to invalidate Key 1 and dont want to change environments or code.
 
 Put your keys in .env.template and then copy .env.template to .env, if .env.template is ever changed, your keys will stay in your own .env file
+
+In this program directory, run:
+
+```
+pip install -r requirements.txt
+```
+
+to install the required packages before starting.
+
+Finally, start the both most simply by running 
+
+```
+python main.py
+```
