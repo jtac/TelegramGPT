@@ -1,6 +1,6 @@
 ﻿# TelegramGPT
 
-This is a python code snipper to initialize and run a Telegram bot that acts as ChatGPT and responds to your mentions, replies or direct messages.
+This is a python code snippet to initialize and run a Telegram bot that acts as ChatGPT and responds to your mentions, replies or direct messages.
 
 Telegram bots are deployed via @BotFather on Telegram, there's extensive help available there.
 
