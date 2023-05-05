@@ -74,4 +74,5 @@ def echo_all(message):
 
 
 # Start the bot's polling loop
+print("Starting bot...")
 bot.infinity_polling()
