@@ -1,20 +1,17 @@
+import os
+from dotenv import load_dotenv
 import telebot
 import openai
 
-# Add your Telegram bot token here
-BOT_TOKEN = "<telegram bot token here>"
-# Initialize the bot connection
-bot = telebot.TeleBot(BOT_TOKEN)
+# Load environment variables from .env file
+load_dotenv()
 
-# Get the bot's username
-bot_info = bot.get_me()
-bot_username = bot_info.username
-
-# Set up the Azure OpenAI API
+# Read the required values from environment variables
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 openai.api_type = "azure"
-openai.api_base = "<your azure endpoint URL>"
-openai.api_version = "2023-03-15-preview"  # Replace if changed
-openai.api_key = "<your azure OpenAI API key>"
+openai.api_base = os.getenv("AZURE_ENDPOINT_URL")
+openai.api_version = "2023-03-15-preview"
+openai.api_key = os.getenv("AZURE_OPENAI_API_KEY")
 
 
 # Message handler function for incoming messages
