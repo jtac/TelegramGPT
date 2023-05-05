@@ -1,23 +1,23 @@
 import telebot
 import openai
 
-# add your telegram bot token here
-BOT_TOKEN = <telegram bot token here>
-# initialize the bot connection
+# Add your Telegram bot token here
+BOT_TOKEN = "<telegram bot token here>"
+# Initialize the bot connection
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # Get the bot's username
 bot_info = bot.get_me()
 bot_username = bot_info.username
 
-
 # Set up the Azure OpenAI API
 openai.api_type = "azure"
-openai.api_base = <your azure endpoint URL>
-openai.api_version = "2023-03-15-preview" # replace if changed
-openai.api_key = <your azure OpenAI API key>
+openai.api_base = "<your azure endpoint URL>"
+openai.api_version = "2023-03-15-preview"  # Replace if changed
+openai.api_key = "<your azure OpenAI API key>"
 
 
+# Message handler function for incoming messages
 @bot.message_handler(func=lambda msg: True)
 def echo_all(message):
     response = None
@@ -42,26 +42,15 @@ def echo_all(message):
                 frequency_penalty=0,
                 presence_penalty=0,
                 stop=None)
-        except ValueError as e:
-            print(f"Error while fetching response from OpenAI API: {e}")
-            bot.reply_to(message, "Error: " + str(e))
-            return
-        except TypeError as e:
-            print(f"Error while fetching response from OpenAI API: {e}")
-            bot.reply_to(message, "Error: " + str(e))
-            return
-        except AttributeError as e:
-            print(f"Error while fetching response from OpenAI API: {e}")
-            bot.reply_to(message, "Error: " + str(e))
-            return
-        except openai.error.APIError as e:
-            if "content_filter" in str(e):
+        except (ValueError, TypeError, AttributeError, openai.error.APIError) as e:
+            if isinstance(e, openai.error.APIError) and "content_filter" in str(e):
                 bot.reply_to(message,
                              "The input text has triggered the content filter. Please modify your message and try "
                              "again.")
                 return
             else:
-                bot.reply_to(message, f"Error while fetching response from OpenAI API: {e}")
+                print(f"Error while fetching response from OpenAI API: {e}")
+                bot.reply_to(message, f"Error: {e}")
                 return
         except Exception as e:
             bot.reply_to(message, f"An unexpected error occurred: {e}")
@@ -80,4 +69,5 @@ def echo_all(message):
         print(f"ignoring: {message.text}")
 
 
+# Start the bot's polling loop
 bot.infinity_polling()
