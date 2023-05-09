@@ -4,8 +4,6 @@ This is a python code snippet to initialize and run a Telegram bot that acts as 
 
 Telegram bots are deployed via @BotFather on Telegram, there's extensive help available there.
 
-Put your keys in .env.template and then copy .env.template to .env, if .env.template is ever changed, your keys will stay in your own .env file
-
 Login to your portal.azure.com, then go to https://portal.azure.com/#blade/Microsoft_Azure_ProjectOxford/CognitiveServicesHub/OpenAI
 
 Here you can find your deployed instances and their names, open one up and find "Endpoint", this is was you need for the .env file
@@ -16,7 +14,14 @@ openai.api_base = <your azure endpoint URL>
 
 You can find your API keys here as well, just use Key 1, Key 2 works as well but is meant as a reserve if you need to invalidate Key 1 and dont want to change environments or code.
 
-Save your changes to .env and then finally, satisfy dependencies for openai, telegram and dotenv by running
+I recommend setting your environment variables with the relevant information, but you can add .env file handling if you want. just add the following snippet at the start of the code ( last import line + first code lines)
+
+    ```
+    from dotenv import load_dotenv
+    load_dotenv()
+    ```
+
+Remember to install required modules, you can do this by running:
 
 ```
 pip install -r requirements.txt
