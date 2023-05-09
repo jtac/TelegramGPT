@@ -1,3 +1,7 @@
 python-dotenv
-openai
-telebot
+openai~=0.27.6
+telebot~=0.0.5
+azure-cognitiveservices-search-websearch
+msrest~=0.7.1
+requests~=2.30.0
+tiktoken~=0.3.3
