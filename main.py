@@ -1,17 +1,23 @@
 import os
-from dotenv import load_dotenv
 import telebot
 import openai
+import tiktoken
+import logging
 
-# Load environment variables from .env file
-load_dotenv()
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Read the required values from environment variables
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-openai.api_type = "azure"
-openai.api_base = os.getenv("AZURE_ENDPOINT_URL")
-openai.api_version = "2023-03-15-preview"
-openai.api_key = os.getenv("AZURE_OPENAI_API_KEY")
+try:
+    BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
+    openai.api_type = "azure"
+    openai.api_base = os.environ["AZURE_ENDPOINT_URL"]
+    openai.api_version = "2023-03-15-preview"
+    openai.api_key = os.environ["AZURE_OPENAI_API_KEY"]
+except KeyError as e:
+    logger.error(f"Environment variable {e} not set")
+    exit(1)
 
 # Initialize the bot connection
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -20,59 +26,83 @@ bot = telebot.TeleBot(BOT_TOKEN)
 bot_info = bot.get_me()
 bot_username = bot_info.username
 
+# tiktoken to count tokens and keep track of usage:
+encoding = tiktoken.get_encoding("cl100k_base")
+maxtokens = 1000
 
-# Message handler function for incoming messages
-@bot.message_handler(func=lambda msg: True)
-def echo_all(message):
-    response = None
-    # Check if the message is a direct message, if the bot's username is in the message text,
-    # or if the message is a reply to the bot
-    if (message.chat.type == 'private') or f"@{bot_username}" in message.text or (
+# Initialize the bot's messages
+messages = []
+def init_messages():
+    global messages
+    messages = [{"role": "system",
+                 "content": "You are a technically savvy, witty and creative AI named Aino. When users ask you a "
+                            "question, work the answer out in a step by step way to be sure you have the right "
+                            "answer."}]
+init_messages()
+
+@bot.message_handler(commands=['reset'])
+def handle_reset(message):
+    init_messages()
+    bot.reply_to(message, "Bot messages have been reset.")
+def limit_token_count():
+    global messages, maxtokens, encoding
+    message_strings = [message["content"] for message in messages]
+    text = " ".join(message_strings)
+    tokens_integer = encoding.encode(text)
+    while len(tokens_integer) > maxtokens:
+        messages.pop(1)
+        message_strings = [message["content"] for message in messages]
+        text = " ".join(message_strings)
+        tokens_integer = encoding.encode(text)
+
+def append_message(message):
+    global messages
+    messages.append(message)
+    limit_token_count()
+
+
+@bot.message_handler(content_types=['text'])
+def handle_message(message):
+    should_respond = (
+        message.chat.type == 'private'
+        or f"@{bot_username}" in message.text
+        or (
             message.reply_to_message
             and message.reply_to_message.from_user
             and message.reply_to_message.from_user.username == bot_username
-    ):
-        print(f'responding to: {message.text}')
-        try:
-            response = openai.ChatCompletion.create(
-                engine="gpt4-32k",
-                messages=[{"role": "system",
-                           "content": "You are a witty and creative AI assistant named Aino. You do your utmost to help"
-                           " everyone find answers to their questions and help them with their creative dilemmas."},
-                          {"role": "user", "content": message.text}],
-                temperature=0.95,
-                max_tokens=1024,
-                top_p=0.95,
-                frequency_penalty=0,
-                presence_penalty=0,
-                stop=None)
-        except (ValueError, TypeError, AttributeError, openai.error.APIError) as e:
-            if isinstance(e, openai.error.APIError) and "content_filter" in str(e):
-                bot.reply_to(message,
-                             "The input text has triggered the content filter. Please modify your message and try "
-                             "again.")
-                return
-            else:
-                print(f"Error while fetching response from OpenAI API: {e}")
-                bot.reply_to(message, f"Error: {e}")
-                return
-        except Exception as e:
-            bot.reply_to(message, f"An unexpected error occurred: {e}")
-            return
+        )
+    )
 
-        if response:
-            # print(response)
-            airesponse = response['choices'][0]['message']['content'].strip()
-            print(f"AI: {airesponse}")
-            bot.reply_to(message, airesponse)
-        else:
-            print("No response received from the API.")
-            bot.reply_to(message, "No response received from the API.")
-            return
-    else:
-        print(f"ignoring: {message.text}")
+    if should_respond:
+        response = get_ai_response(message.text)
+        bot.reply_to(message, response)
+        append_message({"role": "assistant", "content": response})
 
+
+def get_ai_response(prompt):
+    append_message({"role": "user", "content": prompt})
+    logger.info(f"Query: {prompt}")
+    try:
+        response = openai.ChatCompletion.create(
+            engine="gpt-35-turbo",
+            messages=messages,
+            temperature=0.5,
+            max_tokens=1024,
+            top_p=0.95,
+            frequency_penalty=0,
+            presence_penalty=0,
+            stop=None)
+        logger.info(f"Bot: {response['choices'][0]['message']['content']}")
+        return response['choices'][0]['message']['content']
+    except openai.Error as e:
+        logger.error(f"OpenAI API error: {e}")
+        return "Sorry, I couldn't process your request at the moment. Please try again later."
 
 # Start the bot's polling loop
-print("Starting bot...")
-bot.infinity_polling()
+if __name__ == "__main__":
+    logger.info("Starting bot...")
+    while True:
+        try:
+            bot.infinity_polling()
+        except Exception as e:
+            logger.error(f"Telegram bot error: {e}")
